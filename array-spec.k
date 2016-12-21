@@ -5,12 +5,17 @@ imports IMP
 rule 
 
 <k>
-(while(i<n-1){
+(while(i<n){
+a[i]=i;
 i=i+ 1;
 }
 =>.K)
 ...
 </k>
+<arrayEnv>
+<arrayId>a</arrayId>
+<arrayStore>M:Map=>arraySeq(N-Int 1)</arrayStore>
+</arrayEnv>
 <env>
 n|->LN:Int
 i|->LI:Int
