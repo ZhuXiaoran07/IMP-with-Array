@@ -17,12 +17,12 @@ i|->LI:Int
 </env>
 <store>
 LN|->N:Int
-LI|->(I:Int=>N -Int 1)
+LI|->(I:Int=>N)
 </store>
 <time>
 T:Int=>T+Int ?T1:Int
 </time>
-requires N>Int 1 andBool I <=Int (N -Int 1)
+requires N>Int 1 andBool I <=Int (N)
 ensures ?T1>Int 0
 
 endmodule
