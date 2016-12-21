@@ -5,12 +5,15 @@ module IMP-SYNTAX
 				 | Id "[" "]"
                  | "read" "(" ")"
 				 | "SymInt"
+				 | "SymInt1"
                  > AExp "/" AExp              [left, strict, division]
 				 | AExp "%" AExp              [left, strict]
                  > AExp "+" AExp              [left, strict]
 				 | AExp "-" AExp              [left, strict]
                  > "spawn" Block
-                 > Id "=" AExp                [strict(2)]
+                 > Id "=" AExp   
+
+				 [strict(2)]
 				 | Id "[" AExp "]" "=" AExp              [strict(3, 2)]
                  | "(" AExp ")"               [bracket]
   syntax BExp  ::= Bool
@@ -61,13 +64,21 @@ module IMP
                   <out color="Orchid" stream="stdout"> .List </out>
 				   <time> 0 </time>
                 </T>
-rule SymInt=>?_:Int
+rule SymInt =>?_:Int
+rule SymInt1 =>?_:Int
 
 syntax KItem ::="["Id "," AExp "]"
-syntax KItem ::= "value-array" "("  Int  ")"
-
+//syntax KItem ::= "value-array" "("  Int  ")"
+syntax Map::="arraySeq""("Int")"  [function]
+rule arraySeq(I)=>(I|->I) arraySeq(I-Int 1) requires I>=Int 0
+rule arraySeq(-1)=>.
 syntax KItem::=  "update" "(" Id "," Int "," Int ")"
 syntax Map::=	"array-map" "(" Int "," Int ")"  [function]
+syntax Map::= "arrayIni" "("Int")"  [function]
+
+rule arrayIni(I)=>I|->?_:Int arrayIni(I-Int 1) requires I>=Int 0
+rule array(-1)=>.
+
 
 rule <k> int X:Id[I:Int];=>[X,I]...</k>
      <env>M:Map</env>
@@ -80,7 +91,7 @@ rule <k> int X:Id[I:Int];=>[X,I]...</k>
  //array
 
 // AExp
-rule array-map(I, L)=>(value-array(L-Int 1)|->0) array-map(I, L-Int 1)
+rule array-map(I, L)=>(L-Int 1|->0) array-map(I, L-Int 1)
 requires L>Int 0
 
 rule array-map(I, 0)=>.Map
@@ -99,7 +110,7 @@ rule X:Id[I1:Int]=I2=>update(X,I1,I2)
 rule <k>update(X,I1,I2)=>I2 ...</k>
 <arrayEnv>
 				  <arrayId> X:Id </arrayId>
-				  <arrayStore>... value-array(I1:Int)|->(_=>I2:Int) ...</arrayStore>
+				  <arrayStore>... I1:Int|->(_=>I2:Int) ...</arrayStore>
 				  </arrayEnv>
 //<store> ... value-array(X, I1)|->(_=>I2)...</store>
 <time> T=>T+Int 1 </time>
@@ -109,7 +120,7 @@ rule <k>(X:Id[I1]=>I2:Int)...</k>
 //<env>...X|->I...</env>
 <arrayEnv>
 		 <arrayId> X:Id </arrayId>
-		<arrayStore>... value-array(I1)|->I2 ...</arrayStore>
+		<arrayStore>... I1|->I2 ...</arrayStore>
 				  </arrayEnv>
 				  
 
@@ -142,7 +153,7 @@ rule <k>(X:Id[I1]=>I2:Int)...</k>
   rule <k> Rho => . ...</k> <env> _ => Rho </env>    [structural]
 // Stmt
   rule _:Int; => .
-  rule <k> X = I:Int => I ...</k>
+  rule <k> X = I:Int =>I ...</k>
        <env>... X |-> N ...</env>
        <store>... N |-> (_ => I) ...</store> 
 		<time> M=>M+Int 1 </time>[assignment]
@@ -150,11 +161,19 @@ rule <k>(X:Id[I1]=>I2:Int)...</k>
   rule if (false) _ else S => S
   rule while (B) S => if (B) {S while (B) S} else {.Stmts}  [structural]
 
-  rule <k> int (X,Xs => Xs); ...</k>
-       <env> Rho => Rho[X <- !N:Int] </env>
-       <store>... .Map => !N |-> 0 ...</store>
-	   <time> M=>M+Int 1 </time>
-  rule int .Ids; => .  [structural]
+  syntax KItem ::= "#initVars" "{" Ids"|" Int "}"
+					
+
+  
+  
+  rule <k> #initVars {X, Xs => Xs | A => A +Int 1} ... </k>
+	  <env> Rho => Rho[X <- A] </env>
+      <store>... .Map => A |-> 0 ...</store>
+	  <time> M=>M+Int 1 </time>
+  
+  rule #initVars {.Ids | _} => .	[structural] 
+  
+  rule int X:Ids; => #initVars {X | 0}		[structural]
 
   syntax Printable ::= Int | String
 /* currently it is necessary to subsort Printable to AExp,
